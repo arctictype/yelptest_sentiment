@@ -1,8 +1,8 @@
 ---
-title: "test"
-author: "rj"
-date: '2018-11-23'
-output: html
+title: "Untitled"
+author: "Rj"
+date: '2018-11-25'
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
