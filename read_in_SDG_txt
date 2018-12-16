@@ -57,12 +57,11 @@ sdg_words_tf%>%
 
 
 sdg_words_rank <- sdg_words_tf %>%
-  select(word, n, total, tf_idf) %>% 
-  #anti_join(stop_words) %>%
+  select(word, n, total, tf_idf) %>%
   group_by(word) %>% 
   mutate(count = n()) %>% 
-  top_n(1,tf_idf) %>% 
-  filter(n >1)
+  top_n(1,tf_idf)
+
 
 sdg_words %>% 
   count(word, sort = TRUE)
