@@ -1,0 +1,49 @@
+---
+title: "let bigram be bigram"
+author: "Rj"
+date: '2018-12-15'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+#bigrams for mississauga
+ylp_mis_bigrams <- for_analysis %>%
+  filter(city == "Mississauga") %>% 
+  select(business_id, text, stars) %>% 
+  unnest_tokens(bigram, text, token = "ngrams", n = 2)
+
+ylp_mis_bigrams <- ylp_mis_bigrams %>%
+  separate(bigram, c("word1", "word2"), sep = " ")
+
+ylp_mis_bigrams <- ylp_mis_bigrams %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word)
+
+ylp_mis_bigrams <- ylp_mis_bigrams %>%
+  unite(bigram, word1, word2, sep = " ")
+
+sdg_bigrams <- sdg %>%
+    unnest_tokens(bigram, V2, token = "ngrams", n = 2)
+
+sdg_bigrams <- sdg_bigrams %>%
+  separate(bigram, c("word1", "word2"), sep = " ")
+
+sdg_bigrams <- sdg_bigrams %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word)
+
+sdg_bigrams <- sdg_bigrams %>%
+  unite(bigram, word1, word2, sep = " ")
+
+ylp_sdg_bigrams <- ylp_mis_bigrams[ylp_mis_bigrams$bigram %in% sdg_bigrams$bigram,]
+  
+
+ylp_sdg_bigrams %>%
+  count(bigram, sort = TRUE)
+```
+
