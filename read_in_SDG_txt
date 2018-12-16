@@ -5,29 +5,27 @@ library(dplyr)
 library(tidyr)
 library(tidytext)
 library(tibble)
-
-
 #load text mining library
 #read txt .... Yelp_SDG.txt
 
-
+sdg_corp <- read.table("~/Documents/Yelp_SDG.txt",sep="\n")
 
 # Read in the data and create a bag of words for each goal
-sdg <- read.table("~/Documents/Yelp_SDG.txt",sep="\n")
-sdg <- str_split(sdg$V1,"\\s")
-names(sdg) <- sapply(sdg, `[[`, 1)
-sdg <- lapply(sdg, `[`, -1)
+sdg_BoW <- read.table("~/Documents/Yelp_SDG.txt",sep="\n")
+sdg_BoW <- str_split(sdg_BoW$V1,"\\s")
+names(sdg_BoW) <- sapply(sdg_BoW, `[[`, 1)
+sdg_BoW <- lapply(sdg_BoW, `[`, -1)
 
 # create an unnested vector with all the words
 
-sdg <- read.table("~/Documents/Yelp_SDG.txt",sep="\n", as.is = TRUE) 
+sdg <- read.table("~/Documents/Yelp_SDG.txt",sep="\n", as.is = TRUE)
 sdg <- str_split(sdg$V1,"\\s", n=2)
 sdg <- do.call(rbind,sdg)
 sdg <- as.data.frame(sdg, stringsAsFactors = FALSE)
 
 
 
-class(sdg_text)
+class(sdg)
 
 
 sdg_text <- sdg %>% 
@@ -36,39 +34,35 @@ sdg_text <- sdg %>%
   anti_join(stop_words) %>%
   #mutate(word = wordStem(word)) %>% 
   filter(!str_detect(word,"^[0-9]|^[_]")) %>% 
-  count(word,sort = TRUE)  %>% 
+  count(V1,word,sort = TRUE)  %>% 
   ungroup()
 
-sdg_words <- sdg_text %>% 
-  count(V1, word, sort = TRUE) %>% 
-  ungroup
-
-total_words <- sdg_words %>% 
-  group_by(V1) %>% 
+total_words <- sdg_text %>% 
+  group_by(word) %>% 
   summarize(total = sum(n))
 
-sdg_words<- left_join(sdg_words, total_words)
+sdg_words<- left_join(sdg_text, total_words)
 
 
 sdg_words
 
-sdg_words <- sdg_words %>% 
+sdg_words_tf <- sdg_words %>% 
   bind_tf_idf(word, V1, n)
 
 
 sdg_words
-sdg_words %>% 
+sdg_words_tf%>% 
   select(-total) %>% 
   arrange(desc(tf_idf))
 
 
-sdg_words_rank <- sdg_words %>%
-  select(word, tf_idf) %>% 
-  anti_join(stop_words) %>%
+sdg_words_rank <- sdg_words_tf %>%
+  select(word, n, total, tf_idf) %>% 
+  #anti_join(stop_words) %>%
   group_by(word) %>% 
   mutate(count = n()) %>% 
   top_n(1,tf_idf) %>% 
-  filter(count >1)
+  filter(n >1)
 
 sdg_words %>% 
   count(word, sort = TRUE)
@@ -88,22 +82,26 @@ createWordCloud = function(train)
 
 createWordCloud(sdg)
 
+###################################################
+##  an attempt to plot the SDG ranked by tf-idf  ##
+###################################################
 
+########################
+##  NOT WORKING
+########################
 
-sdg_words <- sdg_text %>%
-  bind_tf_idf(word, n)
-
-sdg_words <- sdg_tex t%>% 
-  #strsplit(sdg, "[[:space:]]")
-  #mutate(sdg = sapply(sdg, `[[`, 1))
-  #bind_tf_idf(word, n) %>% 
+sdg_words_tf%>% 
   arrange(desc(tf_idf)) %>%
-  mutate(word = factor(word, levels = rev(unique(word)))) %>% 
   top_n(15) %>% 
-  ungroup()
+  ungroup() %>% 
 
-ggplot(aes(word, tf_idf, fill = business_id)) +
+ggplot(aes(word, tf_idf, fill = V1)) +
   geom_col(show.legend = FALSE) +
   labs(x = NULL, y = "tf-idf") +
-  facet_wrap(~business_id, ncol = 2, scales = "free") +
+  facet_wrap(~V1, ncol = 2, scales = "free") +
   coord_flip()
+
+
+
+
+
