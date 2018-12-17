@@ -3,10 +3,13 @@
 Overview
 
 Testing restaurant customers sentiment towards
-
 sustainable practices
+
+
 Sustainable business practices and sentiment analysis on Yelp restaurant reviews
+
 Introduction
+
 While we don’t always have the opportunity to prepare and eat meals our own meals, there are always restaurant ready to cater to us.  Depending on individual lifestyles, naturally we have to rely on food establishments - dinning both in and out.  I don’t think I am alone in holding the opinion that a good restaurant is characterized as being great when not only simply considering how the food that is served taste.  Food based businesses vary greatly but what can we say makes a restaurant really great and how could we define great?  The answer can vary significantly depending on who you ask and defining great can be done from performing analysis on existing users’ reviews. 
 
 Yelp is often loosely categorised as an adjunct social network based on its active community of reviewers. It ranks with top twenty western world most used online platforms considering that is has an average of 75 million mobile web unique visitors.  Yelp explicitly provides crowd sourced business reviews and local searches, is highly prolific and user feedback has been shown to have a significant impact on a business’s success. (Yu et, al., 2017). You don’t need an account to do a local business search, you’ll also find yelp reviews paired to Apple maps.   YELP allows users to look how others have measured their experience with the business found on the platform.  In this report, using natural language processing, I seek to determine whether a businesses commitment to being a sustainable company impacts its Yelp rating or if it even can be demonstrated to be represented. 
