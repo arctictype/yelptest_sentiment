@@ -2,7 +2,7 @@
 
 Overview
 
-Testing restaurant customers sentiment towards //n
+Testing restaurant customers sentiment towards
 
 sustainable practices
 Sustainable business practices and sentiment analysis on Yelp restaurant reviews
