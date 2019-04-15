@@ -1,0 +1,106 @@
+library(tm) 
+library(stringr)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(tidytext)
+library(tibble)
+#load text mining library
+#read txt .... Yelp_SDG.txt
+
+sdg_corp <- read.table("~/Documents/Yelp_SDG.txt",sep="\n")
+
+# Read in the data and create a bag of words for each goal
+sdg_BoW <- read.table("~/Documents/Yelp_SDG.txt",sep="\n")
+sdg_BoW <- str_split(sdg_BoW$V1,"\\s")
+names(sdg_BoW) <- sapply(sdg_BoW, `[[`, 1)
+sdg_BoW <- lapply(sdg_BoW, `[`, -1)
+
+# create an unnested vector with all the words
+
+sdg <- read.table("~/Documents/Yelp_SDG.txt",sep="\n", as.is = TRUE)
+sdg <- str_split(sdg$V1,"\\s", n=2)
+sdg <- do.call(rbind,sdg)
+sdg <- as.data.frame(sdg, stringsAsFactors = FALSE)
+
+
+
+class(sdg)
+
+
+sdg_text <- sdg %>% 
+  transmute(V1, text=V2) %>% 
+  unnest_tokens(word, text) %>% 
+  anti_join(stop_words) %>%
+  #mutate(word = wordStem(word)) %>% 
+  filter(!str_detect(word,"^[0-9]|^[_]")) %>% 
+  count(V1,word,sort = TRUE)  %>% 
+  ungroup()
+
+total_words <- sdg_text %>% 
+  group_by(word) %>% 
+  summarize(total = sum(n))
+
+sdg_words<- left_join(sdg_text, total_words)
+
+
+sdg_words
+
+sdg_words_tf <- sdg_words %>% 
+  bind_tf_idf(word, V1, n)
+
+
+sdg_words
+sdg_words_tf%>% 
+  select(-total) %>% 
+  arrange(desc(tf_idf))
+
+
+sdg_words_rank <- sdg_words_tf %>%
+  select(word, n, total, tf_idf) %>%
+  group_by(word) %>% 
+  mutate(count = n()) %>% 
+  top_n(1,tf_idf)
+
+
+sdg_words %>% 
+  count(word, sort = TRUE)
+
+
+createWordCloud = function(train)
+{
+  train %>%
+    unnest_tokens(word, V2) %>%
+    filter(!word %in% stop_words$word) %>%
+    count(word,sort = TRUE) %>%
+    ungroup()  %>%
+    head(30) %>%
+    
+    with(wordcloud(word, n, scale = c(400, 22),max.words = 30,colors=brewer.pal(8, "Dark2")))
+}
+
+createWordCloud(sdg)
+
+###################################################
+##  an attempt to plot the SDG ranked by tf-idf  ##
+###################################################
+
+########################
+##  NOT WORKING
+########################
+
+sdg_words_tf%>% 
+  arrange(desc(tf_idf)) %>%
+  top_n(15) %>% 
+  ungroup() %>% 
+
+ggplot(aes(word, tf_idf, fill = V1)) +
+  geom_col(show.legend = FALSE) +
+  labs(x = NULL, y = "tf-idf") +
+  facet_wrap(~V1, ncol = 2, scales = "free") +
+  coord_flip()
+
+
+
+
+

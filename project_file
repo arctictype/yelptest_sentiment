@@ -1,0 +1,706 @@
+---
+title: "Untitled"
+author: "Rj"
+date: '2018-11-27'
+output:
+    html_document:
+    number_sections: true
+    toc: true
+    fig_width: 10
+    code_folding: hide
+    fig_height: 4.5
+    theme: cosmo
+    highlight: tango
+---
+
+```{r "Libraries", message=FALSE}
+library(tidyverse) #  data manipulation and graphs
+library(stringr) #  string manipulation
+library(lubridate) #  date manipulation
+library(wordcloud) #  wordcloud
+library(tidytext) # tidy implementation of NLP methods
+library(data.table)
+library(ggplot2)
+library(igraph) #  graphs
+library(ggraph) #  graphs
+
+library(topicmodels) # for LDA topic modelling 
+library(tm) # general text mining functions, making document term matrixes
+library(SnowballC) # for stemming
+
+library(textcat)
+library(corrplot)
+fillColor = "#FFA07A"
+fillColor2 = "#F1C40F"
+
+cols <- brewer.pal(10, "Paired")
+pal <-colorRampPalette(cols)
+
+```
+
+```{r resding data - JSON, message=FALSE}
+library("jsonlite")
+#json2 <- stream_in(file(description = "~/Downloads/yelp_academic_dataset_review.json"))
+#json3 <- stream_in(file(description = "~/Downloads/yelp_academic_dataset_review.json"))
+```
+
+```{r Looking at the data}
+#EDA
+str(json2)
+str(json3)
+```
+
+```{r and Glimpse}
+glimpse(json2)
+glimpse(json3)
+```
+
+```{r Split Catagory string into words for analysis from Bukun }
+categories <- str_split(json2$categories,", ")
+categories <- as.data.frame(unlist(categories))
+colnames(categories) = c("Name")
+
+
+categories %>%
+  group_by(Name) %>%
+  summarise(Count = n()) %>%
+  arrange(desc(Count)) %>%
+  ungroup() %>%
+  mutate(Name = reorder(Name,Count)) %>%
+  head(10) %>%
+
+  ggplot(aes(x = Name,y = Count)) +
+  geom_bar(stat='identity',colour="white", fill =fillColor2) +
+  geom_text(aes(x = Name, y = 1, label = paste0("(",Count,")",sep="")),
+            hjust=0, vjust=.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'Name of Category', y = 'Count', 
+       title = 'Top 10 Categories of Business') +
+  coord_flip() + 
+  theme_bw()
+
+```
+
+```{r Using Pattern Matching to Subset Restaurant }
+
+##grepl(global regular expression print)
+
+restaurants <- json2[grepl('Restaurant',json2$categories),]
+
+glimpse(restaurants)
+glimpse(json2)
+
+
+
+```
+
+```{r Using subsetted table to group review data }
+### Saving All the reviews for business identified as Restaurants
+with_reviews <- json3[json3$business_id %in% restaurants$business_id,]
+#save the file for back-up
+write.csv(with_reviews,"~/Documents/yelp_academic_restaurant_reviews.csv")
+### Saving All the restaurants for those identified being located in the top ten cities to limit the size od data for analysis. 
+
+#filter restaurants for top ten cities
+#c()
+
+topten_rest <- restaurants %>% 
+  group_by(city) %>%
+  summarise(Count = n()) %>%
+  arrange(desc(Count)) %>%
+  ungroup() %>%
+  head(10)
+
+#Dimensionality Reduction:
+  
+#create a test that that we can refernce later to match finding against attributes
+#droping neighbourhood, address, postal code, lat & lon. Dimension Reduction. and unesting hours and attributes.
+
+
+topten <- restaurants[restaurants$city %in% topten_rest$city,]
+
+test_set<-cbind(topten[,c(1,2,5,6,10,11,12)], unnest(topten$attributes), unnest(topten$hours))
+
+glimpse(test_set)
+
+topten_with_reviews <- json3[json3$business_id %in% topten$business_id,]
+```{r}
+#Data set to run text analysis on.
+
+
+```
+
+
+```{r Univariate analysis}
+
+
+
+
+```
+
+
+```{r Top ten Cities with the highest number of business registered as restaurants Visualized}
+
+#Top Ten Cities with Highest number of Restaurants Registered
+restaurants %>%
+  group_by(city) %>%
+  summarise(Count = n()) %>%
+  arrange(desc(Count)) %>%
+  ungroup() %>%
+  mutate(City = reorder(city,Count)) %>%
+  head(10) %>% 
+
+  ggplot(aes(x = City,y = Count)) +
+  geom_bar(stat='identity',colour="white", fill =fillColor) +
+  geom_text(aes(x = City, y = 1, label = paste0("(",round(Count/1e3)," K )",sep="")),
+            hjust=0, vjust=.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'City', y = 'Count of Reviews', 
+       title = 'Top Ten Cities with Highest Number of Restaurants Registered') +
+  coord_flip() + 
+  theme_bw()
+
+##z<-head(table(sort(grepl("sustainable", with_reviews$text)), decreasing = TRUE),10)
+
+#Counts the cities from the business table
+#y<-as.data.frame(table(json2$city))
+
+
+```
+
+```{r counting the NA for each attribute in analysis data}
+
+sum(is.na(for_analysis))
+NA_values <- is.na(for_analysis)
+
+NA_count <- apply(NA_values,2,sum)
+NA_count
+
+#there aren't any NA's in the first three columns.
+```
+
+
+```{r    stacked bar with distrubution of restaurants overall rating}
+par(mfrow = c(2,1))
+hist((subset(restaurants, city== "Toronto")$stars),
+     main="Toronto Restaurants", 
+     xlab="Overall Rating of Individual Restaurants", 
+     border="blue", 
+     col="green",
+     xlim=c(1,5),
+     las=1, 
+     breaks=10)
+
+
+hist((subset(for_analysis, city== "Toronto")$stars),
+     main="Toronto Reviews", 
+     xlab="All reviews for all Restaurants", 
+     border="blue", 
+     col="purple",
+     xlim=c(1,5),
+     las=1, 
+     breaks=5)
+```
+
+```{r}
+
+#Trying to figure out how useful this will be}
+#Cities with the most number of reviews per restaurant (Indicates cities with Active Reviewer)
+with_reviews %>%
+  group_by(business_id) %>%
+  summarise(Count = n()) %>%
+  arrange(desc(Count)) %>%
+  ungroup() %>%
+  mutate(City = reorder(business_id,Count)) %>%
+  head(10) %>% 
+
+  ggplot(aes(x = City,y = Count)) +
+  geom_bar(stat='identity',colour="white", fill =fillColor) +
+  geom_text(aes(x = City, y = 1, label = paste0("(",round(Count/1e3)," K )",sep="")),
+            hjust=0, vjust=.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'City', y = 'Count of Reviews', 
+       title = "Top Ten Restaurant ID's with Highest Number of Reviews") +
+  coord_flip() + 
+  theme_bw()
+
+```
+
+```{r  Some Stuff and a Histogram}
+#data.table(with_reviews$business_id)
+
+#ratings_and_users <- with_reviews %>% group_by(business_id) %>% count()
+ratings_and_users <- with_reviews %>%
+  group_by(business_id) %>%
+  #count()
+  summarise(Count = n()) %>%
+  arrange(desc(Count)) %>%
+  head(10) %>% 
+  print
+
+
+```
+
+
+
+```{r}
+createWordCloud = function(train)
+{
+  train %>%
+  unnest_tokens(word, text) %>%
+  filter(!word %in% stop_words$word) %>%
+  count(word,sort = TRUE) %>%
+  ungroup()  %>%
+  head(30) %>%
+  
+  with(wordcloud(word, n, max.words = 30,colors=brewer.pal(8, "Dark2")))
+}
+
+createWordCloud(for_analysis %>%
+  filter(city== "Toronto"))
+
+
+createWordCloud(for_analysis %>%
+  filter(city== "Toronto"))
+```
+
+
+
+
+```{r}
+for_analysis %>%
+  filter(city == "Toronto") %>%
+  unnest_tokens(word, text) %>%
+  filter(!word %in% stop_words$word) %>%
+  filter(!word %in% c('food','restaurant')) %>%
+  count(word,sort = TRUE) %>%
+  ungroup() %>%
+  mutate(word = factor(word, levels = rev(unique(word)))) %>%
+  head(10) %>%
+  
+  ggplot(aes(x = word,y = n)) +
+  geom_bar(stat='identity',colour="white", fill =fillColor) +
+  geom_text(aes(x = word, y = 1, label = paste0("(",n,")",sep="")),
+            hjust=0, vjust=.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'Word', y = 'Word Count', 
+       title = 'Word Count') +
+  coord_flip() + 
+  theme_bw()
+
+```
+
+
+```{r}
+#STARTING SENTIMENT ANALYSIS
+```
+
+```{r}
+segment the data set to match a custom library. 
+```
+
+
+```{r}
+train_index <- sample(1:nrow(for_analysis), 0.7 * nrow(for_analysis))
+train.set <- for_analysis[train_index,]
+test.set  <- for_analysis[-train_index,]
+```
+
+```{r}
+
+
+library(caret)
+intrain<-createDataPartition(y=sub_train$classe,p=0.7,list=FALSE)
+training<-m_train[intrain,]
+testing<-m_train[-intrain,]
+
+
+```
+
+```{r}
+#Is the restaurant part of a chain? If the restaurant name appears more than once in the list then it is considered to be part of a chain. This includes national or local chains. Some chains that are represented by only one restaurant in the particular list did not count as a chain due to the way a chain is defined.
+
+#Is the date a factor
+
+# ensure results are repeatable
+set.seed(2020)
+# load the library
+library(mlbench)
+library(caret)
+library(rpart)
+# load the dataset
+train_index <- sample(1:nrow(test_set), 0.7 * nrow(test_set))
+train.set <- test_set[train_index,]
+test.set  <- test_set[-train_index,]
+
+train.set_new <- train.set[-5]
+test.set_new <- test.set[-5]
+
+stars_train_labels <- train.set$stars 
+stars_test_labels <- test.set$stars
+
+#glm_model <- glm(stars~.,train.set, family = "binomial")
+
+c<-ncol(train.set)
+pvalues <- numeric(c)
+for (i in 1:c) {
+  fit <- lm(train.set$stars ~ train.set[,i])
+  summ <- summary(fit)
+  pvalues[i] <- summ$coefficients[2,4]
+}
+
+
+# prepare training scheme
+control <- trainControl(method="repeatedcv", number=10, repeats=3)
+# train the model
+model <- train(diabetes~., data=PimaIndiansDiabetes, method="lvq", preProcess="scale", trControl=control)
+# estimate variable importance
+importance <- varImp(model, scale=FALSE)
+# summarize importance
+print(importance)
+# plot importance
+plot(importance)
+range(for_analysis$date)
+
+```
+
+```{r}
+
+```
+
+
+
+
+
+```{r  Sentiment Analysis}
+###how big is the word library
+str(get_sentiments("afinn"))
+
+```
+
+```{r}
+str(get_sentiments("afinn"))
+options(max.print=5000)
+
+table(get_sentiments("afinn"))
+
+get_sentiments("bing") %>%
+  #summarise(count = n()) %>% 
+  filter(word == "miss")
+
+
+findAssocs(dtm, terms = c("sustainable", corlimit = 0.3))
+
+```
+
+
+```{r}
+positiveWordsBarGraph <- function(SC) {
+  contributions <- SC %>%
+      unnest_tokens(word, text) %>%
+    count(word,sort = TRUE) %>%
+    ungroup() %>%
+    
+    inner_join(get_sentiments("afinn"), by = "word") %>%
+    group_by(word) %>%
+    summarize(occurences = n(),
+              contribution = sum(score))
+  
+  contributions %>%
+    top_n(20, abs(contribution)) %>%
+    mutate(word = reorder(word, contribution)) %>%
+    head(20) %>%
+    ggplot(aes(word, contribution, fill = contribution > 0)) +
+    geom_col(show.legend = FALSE) +
+    coord_flip() + theme_bw()
+}
+
+positiveWordsBarGraph(for_analysis %>%
+                        filter(city == "Toronto"))
+```
+
+```{r}
+
+toronto_reviews = for_analysis %>%
+  filter(business_id== "iCQpiavjjPzJ5_3gPD5Ebg")
+
+mon_ami_gabi_reviews = reviews %>%
+  filter(business_id == "4JNXUYY8wbaaDmk3BPzlWw")
+
+calculate_sentiment <- function(review_text)
+{
+  sentiment_lines  =  review_text %>%
+                  filter(textcat(text) == "english") %>%  # considering only English text
+                  unnest_tokens(word, text) %>%
+                  inner_join(get_sentiments("afinn"), by = "word") %>%
+                  group_by(review_id) %>%
+                  summarize(sentiment = mean(score),words = n()) %>%
+                  ungroup() %>%
+                  filter(words >= 5) 
+
+  return(sentiment_lines)
+  
+}
+
+
+sentiment_lines = calculate_sentiment(business_id == "iCQpiavjjPzJ5_3gPD5Ebg")
+
+head(sentiment_lines)
+```
+
+```{r}
+####FIGURING OUT HOW TO RUN tf-idf
+ylp_words <- ylp_words %>%
+  bind_tf_idf(word, business_id, n)
+
+ylp_words
+
+ylp_words %>%
+  arrange(desc(tf_idf))
+
+
+ylp_words %>%
+  arrange(desc(tf_idf)) %>%
+  mutate(word = factor(word, levels = rev(unique(word)))) %>% 
+  group_by(business_id[1]) %>% 
+  top_n(15) %>% 
+  ungroup %>%
+  
+  ggplot(aes(word, tf_idf, fill = business_id)) +
+  geom_col(show.legend = FALSE) +
+  labs(x = NULL, y = "tf-idf") +
+  facet_wrap(~business_id, ncol = 2, scales = "free") +
+  coord_flip()
+
+term <- Terms(docs_mississauga)
+
+```
+
+```{r}
+# WHAT ABOUT SVM's
+library(e1071)
+library(lubridate)
+
+
+for_analysis <- topten_with_reviews %>% 
+  filter(useful >=1 | funny > 0 | cool > 0) %>%
+  filter(useful >=1) %>%
+  filter(stars != 3 ) %>% 
+  select(business_id, stars, date, text) %>%
+  mutate(business_id = as.factor(business_id)) %>% 
+  mutate(stars = cut(stars, c(0,4,5))) %>% 
+  mutate(stars = as.numeric(stars)) %>% 
+  mutate(stars = as.factor(stars)) %>% 
+  inner_join(select(json2, business_id, city), by = "business_id")
+
+
+  
+library(stringr)
+library(readr)
+
+ylp_text_to <- for_analysis %>%
+  filter(city == "Toronto") %>% 
+  select(business_id, text, stars) %>% 
+  unnest_tokens(word, text) %>% 
+  anti_join(stop_words) %>%
+  mutate(word = wordStem(word)) %>% 
+  filter(!str_detect(word,"^[0-9]|^[_]")) %>% 
+  ungroup()
+
+ylp_text_lv <- for_analysis %>%
+  filter(city == "Las Vegas") %>% 
+  select(business_id, text, stars) %>% 
+  unnest_tokens(word, text) %>% 
+  anti_join(stop_words) %>%
+  mutate(word = wordStem(word)) %>% 
+  filter(!str_detect(word,"^[0-9]|^[_]")) %>% 
+  ungroup()
+
+
+ylp_text_phx <- for_analysis %>%
+  filter(city == "Phoenix") %>% 
+  select(business_id, text, stars) %>% 
+  unnest_tokens(word, text) %>% 
+  anti_join(stop_words) %>%
+  mutate(word = wordStem(word)) %>% 
+  filter(!str_detect(word,"^[0-9]|^[_]")) %>% 
+  ungroup()
+
+  
+ylp_text_mtl <- for_analysis %>%
+  filter(city == "Montréal") %>% 
+  select(business_id, text, stars) %>% 
+  unnest_tokens(word, text) %>% 
+  anti_join(stop_words) %>%
+  mutate(word = wordStem(word)) %>% 
+  filter(!str_detect(word,"^[0-9]|^[_]")) %>% 
+  ungroup()
+  
+  ylp_text_cal <- for_analysis %>%
+  filter(city == "Calgary") %>% 
+  select(business_id, text, stars) %>% 
+  unnest_tokens(word, text) %>% 
+  anti_join(stop_words) %>%
+  mutate(word = wordStem(word)) %>% 
+  filter(!str_detect(word,"^[0-9]|^[_]")) %>% 
+  ungroup()
+  
+ylp_text_clt <- for_analysis %>%
+  filter(city == "Charlotte") %>% 
+  select(business_id, text, stars) %>% 
+  unnest_tokens(word, text) %>% 
+  anti_join(stop_words) %>%
+  mutate(word = wordStem(word)) %>% 
+  filter(!str_detect(word,"^[0-9]|^[_]")) %>% 
+  ungroup()
+  
+ylp_text_pgh <- for_analysis %>%
+  filter(city == "Pittsburgh") %>% 
+  select(business_id, text, stars) %>% 
+  unnest_tokens(word, text) %>% 
+  anti_join(stop_words) %>%
+  mutate(word = wordStem(word)) %>% 
+  filter(!str_detect(word,"^[0-9]|^[_]")) %>% 
+  ungroup()
+  
+ylp_text_sdl <- for_analysis %>%
+  filter(city == "Scottsdale") %>% 
+  select(business_id, text, stars) %>% 
+  unnest_tokens(word, text) %>% 
+  anti_join(stop_words) %>%
+  mutate(word = wordStem(word)) %>% 
+  filter(!str_detect(word,"^[0-9]|^[_]")) %>% 
+  ungroup()
+  
+ylp_text_clv <- for_analysis %>%
+  filter(city == "Cleveland") %>% 
+  select(business_id, text, stars) %>% 
+  unnest_tokens(word, text) %>% 
+  anti_join(stop_words) %>%
+  mutate(word = wordStem(word)) %>% 
+  filter(!str_detect(word,"^[0-9]|^[_]")) %>% 
+  ungroup()
+
+ylp_text_mis <- for_analysis %>%
+  filter(city == "Mississauga") %>% 
+  filter(word )
+  select(business_id, text, stars) %>% 
+  unnest_tokens(word, text) %>% 
+  anti_join(stop_words) %>%
+  mutate(word = wordStem(word)) %>% 
+  filter(!str_detect(word,"^[0-9]|^[_]")) %>% 
+  ungroup()
+
+
+```
+
+```{r}
+library(data.table)
+ylp_text %>%
+  count(word)
+  
+```
+
+```{r}
+
+#head(ylp_text)
+
+#converting city attribute to function 
+
+
+range(for_analysis$stars)
+
+
+
+
+for_svm <- for_analysis %>% 
+  filter(stars != 3 ) %>% 
+  #filter(city == "Toronto") %>%
+  select(business_id, text, stars) %>% 
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>% 
+  filter(!business_id )
+  filter(word != str_detect == true)
+  mutate(business_id = as.factor(business_id)) %>% 
+  mutate(stars = cut(stars, c(0,4,5))) %>% 
+  mutate(stars = as.numeric(stars)) %>% 
+  mutate(stars = as.factor(stars))
+  
+write.csv(for_svm_To,"~/Documents/yelp_academic_for_svm_To.csv")
+
+train_index <- sample(1:nrow(for_svm_Mi), 0.7 * nrow(for_svm_Mi))
+train.set <- for_svm_Mi[train_index,]
+test.set  <- for_svm_Mi[-train_index,]
+
+
+library(e1071)
+
+svm_model <- svm(stars~., data = train.set, cost =1, gamma =1)
+
+
+
+
+for_analysis$date <- as.Date(for_analysis$date)
+for_analysis$day<-as.factor(day(as.POSIXlt(for_analysis$date, format="%Y/%m/%d")))
+for_analysis$month<-as.factor(month(as.POSIXlt(for_analysis$date, format="%Y/%m/%d")))
+for_analysis$year<-as.factor(year(as.POSIXlt(for_analysis$date, format="%Y/%m/%d")))
+
+write.csv(for_analysis,"~/Documents/yelp_academic_for_analysis.csv")
+
+ylp_text <- for_analysis %>%
+  filter(city == "Toronto") %>%
+  select(business_id, text) %>% 
+  unnest_tokens(word, text) %>% 
+  anti_join(stop_words) %>% 
+  mutate(word = wordStem(word)) %>% 
+  ungroup()
+
+write.csv(ylp_text,"~/Documents/yelp_academic_for_analysis.csv")
+
+
+for_analysis1 <- for_analysis %>% 
+  select(business_id, city, day, month, year) %>% 
+  inner_join(select(ylp_text, business_id, word), by = "business_id")
+
+for_analysis1<- for_analysis[for_analysis$business_id %in% ylp_text$business_id]
+with_reviews <- json3[json3$business_id %in% restaurants$business_id,]
+
+
+glimpse(ylp_text)
+
+ylp_text %>%
+  count(word, sort = TRUE) %>% 
+  filter(!word %in% c('food','restaurant'))
+
+
+table(for_analysis$stars)
+
+fct_count(for_analysis$)
+length(for_analysis$stars == "3")
+
+
+
+library(e1071)
+library(lubridate)
+
+svm_model =svm(y~., )
+train <- read.csv("train.csv",header=TRUE)
+test <- read.csv("test.csv",header=TRUE)
+
+train_index <- sample(1:nrow(for_analysis[,c(1,2,3,)]), 0.7 * nrow(for_analysis))
+train.set <- yelp_reduced[train_index,]
+test.set  <- yelp_reduced[-train_index,]
+
+
+train_cols<-train[,c(3:42,44:46)]
+labels<-as.matrix(train[,43])
+testdata<-test[,3:45]
+
+```
+
+```{r}
+topten %>% 
+  select(name) %>% 
+  filter(business_id == "LI9sVHgnX-DzFyvWmPDRgA")
+```
+

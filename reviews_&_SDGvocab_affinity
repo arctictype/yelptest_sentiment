@@ -1,0 +1,165 @@
+library(e1071)
+library(lubridate)
+library(rpart)
+
+##reducing each city and all business BoW's to business only
+##that have reviews containing words from SDG's
+rev_mis <- ylp_text_mis[ylp_text_mis$word %in% sdg_words_rank$word,]
+
+##[[29,366 obs.]]
+
+#rev_mis <- rev_mis %>% 
+  #group_by(business_id) %>% 
+  #count(business_id, sort = TRUE) %>% 
+  #head(3)
+
+##patching business id's to all reviews of that business  
+#ylp_text_mis_redcd <- ylp_text_mis[ylp_text_mis$business_id %in% rev_mis$business_id,]
+
+##performing td-idf on these filtered reviews
+sdg_words_mis <- rev_mis %>% 
+  select(business_id, stars, word) %>% 
+  filter(!word %in% c('food','restaurant')) %>%
+  count(business_id, word, sort = TRUE)
+
+##[[8,277 obs.]]
+
+total_words_mis <- sdg_words_mis %>% 
+  group_by(word) %>% 
+  summarize(total = sum(n))
+
+sdg_words_mis <- left_join(sdg_words_mis, total_words_mis)
+
+sdg_words_mis <- sdg_words_mis %>% 
+  bind_tf_idf(word, business_id, n)
+
+sdg_words_mis <- left_join(sdg_words_mis, rev_mis)
+
+
+sdg_words_mis %>%
+  select(word,total) %>% 
+  distinct(word) %>% 
+  
+  
+
+
+library(magrittr)
+
+cols <- c("business_id", "word", "stars")
+
+sdg_words_mis <- sdg_words_mis %>%
+  mutate_each_(funs(factor(.)),cols)
+
+
+train_index <- sample(1:nrow(sdg_words_mis), 0.7 * nrow(sdg_words_mis))
+train.set <- sdg_words_mis[train_index,]
+test.set  <- sdg_words_mis[-train_index,]
+
+#train.set_new <- train.set[,c(1:2,7)]
+#test.set_new <- test.set[,c(1:2,7)]
+
+#train_cols<-train[,c(3:42,44:46)]
+labels<-as.matrix(train.set[,8])
+
+#-------------------------------------------------
+
+  
+
+svm.model <- svm(stars~.,train.set, cost = 100, gamma = 1) #1,587 x 8
+svm.pred  <- predict(svm.model, test.set[,-8]) #1:4,538 <- 4,538 x 8
+
+rpart.model <- rpart(stars ~ ., data = train.set) #1,587 x 8
+rpart.pred <- predict(rpart.model, test.set[,-8], type = "class") #1: 4,538 x 4,538
+
+table(pred = svm.pred, true = test.set[,8])  #4,538 x 4,538
+table(pred = rpart.pred, true = test.set[,8])
+
+fit <- svm(train.set$tf_idf,labels)
+new <- predict(fit, test.set$stars)
+plot(train.set$tf_idf,train.set$stars)
+points(train.set$tf_idf, log(train.set$tf_idf), col = 2)
+points(train.set$tf_idf, new, col = 4)
+
+predict(fit, data_frame(test.set$=green))
+
+
+predictions<-as.data.frame(predict(fit,newdata=testdata))
+
+
+stars_train_labels <- train.set$stars
+stars_test_labels <- test.set$stars
+
+fit <- svm(as.matrix(train.set_new),labels,cost=1,scale=FALSE,type="one-classification")
+predictions<-as.data.frame(predict(fit,test.set_new))
+
+
+
+c<-ncol(train.set)
+pvalues <- numeric(c)
+#for (i in 1:c) {
+
+fit <- lm(train.set$stars ~ train.set$tf_idf)
+summ <- summary(fit)
+pvalues <- summ$coefficients
+ord <- order(pvalues)
+glm_model <- glm(train.set$stars~.,train.set$tf_idf, family = "binomial")
+summary(glm_model)
+fit
+
+fit <- lm(train.set$stars ~ train.set)
+
+ord <- order(pvalues)
+
+
+
+##performing SVM on these three businesses
+
+
+sdg_words_mis <- left_join(sdg_words_mis, total_words_mis)
+
+train_index <- sample(1:nrow(ylp_text_mis_redcd), 0.7 * nrow(ylp_text_mis_redcd))
+train.set <- ylp_text_mis_redcd[train_index,]
+test.set  <- ylp_text_mis_redcd[-train_index,]
+
+svm_model <- svm(stars~., data = train.set, cost =1, gamma =1)
+
+
+
+
+
+
+
+rev_clv <- ylp_text_clv[ylp_text_clv$word %in% sdg_text$word,]
+
+##performing td-idf on these filtered reviews
+sdg_words_mis <- rev_mis %>% 
+   select(business_id, stars, word) %>% 
+   filter(!word %in% c('food','restaurant')) %>%
+   count(business_id, word, sort = TRUE)
+
+total_words_mis <- sdg_words_mis %>% 
+  group_by(word) %>% 
+  summarize(total = sum(n))
+
+sdg_words_mis <- left_join(sdg_words_mis, total_words_mis)
+
+sdg_words_mis <- sdg_words_mis %>% 
+ bind_tf_idf(word, business_id, n)
+
+highlight <- sdg_words_mis %>% 
+ arrange(business_id, tf_idf, sort =TRUE)
+
+
+quantile(sdg_words_mis$tf_idf)
+[sdg_words_mis$tf_idf]
+
+summary(sdg_words_mis)
+
+rev_sdl <- ylp_text_sdl[ylp_text_sdl$word %in% sdg_text$word,]
+rev_pbg <- ylp_text_pgh[ylp_text_sdl$word %in% sdg_text$word,]
+rev_clt <- ylp_text_clt[ylp_text_clt$word %in% sdg_text$word,]
+rev_cal <- ylp_text_cal[ylp_text_cal$word %in% sdg_text$word,]
+rev_mtl <- ylp_text_mtl[ylp_text_mtl$word %in% sdg_text$word,]
+rev_phx <- ylp_text_phx[ylp_text_phx$word %in% sdg_text$word,]
+rev_lv <- ylp_text_lv[ylp_text_lv$word %in% sdg_text$word,]
+rev_to <- ylp_text_to[ylp_text_to$word %in% sdg_text$word,]
